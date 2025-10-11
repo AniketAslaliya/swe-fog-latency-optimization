@@ -11,7 +11,7 @@ admin.initializeApp();
 const corsHandler = cors({ origin: true });
 
 // Authentication middleware
-const authenticateUser = async (req: any, res: any, next: any) => {
+const authenticateUser = async (req: any, res: any): Promise<any> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -21,7 +21,7 @@ const authenticateUser = async (req: any, res: any, next: any) => {
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await admin.auth().verifyIdToken(token);
     req.user = decodedToken;
-    next();
+    return decodedToken;
   } catch (error) {
     console.error('Authentication error:', error);
     return res.status(401).json({ error: 'Invalid authentication token' });
@@ -36,14 +36,15 @@ export const processOnFog = functions.https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     try {
       // Authenticate user
-      await authenticateUser(req, res, async () => {
-        // Simulate fog processing delay (100ms)
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        res.status(200).json({
-          message: "Packet processed by FOG",
-          user: req.user.email
-        });
+      const user = await authenticateUser(req, res);
+      if (!user) return; // Authentication failed, response already sent
+      
+      // Simulate fog processing delay (100ms)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      res.status(200).json({
+        message: "Packet processed by FOG",
+        user: user.email
       });
     } catch (error) {
       console.error("Error processing on fog:", error);
@@ -62,14 +63,15 @@ export const processOnCloud = functions.https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     try {
       // Authenticate user
-      await authenticateUser(req, res, async () => {
-        // Simulate cloud processing delay (500ms)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        res.status(200).json({
-          message: "Packet processed by CLOUD",
-          user: req.user.email
-        });
+      const user = await authenticateUser(req, res);
+      if (!user) return; // Authentication failed, response already sent
+      
+      // Simulate cloud processing delay (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      res.status(200).json({
+        message: "Packet processed by CLOUD",
+        user: user.email
       });
     } catch (error) {
       console.error("Error processing on cloud:", error);
