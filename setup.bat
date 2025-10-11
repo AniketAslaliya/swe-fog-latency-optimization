@@ -39,8 +39,9 @@ echo ✅ Setup completed successfully!
 echo.
 echo 🚀 To run the application:
 echo 1. Terminal 1: firebase emulators:start
-echo 2. Terminal 2: cd client && npm run dev
-echo 3. Open: http://localhost:5173
+echo 2. Terminal 2: cd client
+echo 3. Terminal 2: npm run dev
+echo 4. Open: http://localhost:5173
 echo.
 echo 📖 See DEPLOYMENT_GUIDE.md for detailed instructions
 pause

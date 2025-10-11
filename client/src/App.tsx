@@ -54,7 +54,7 @@ function App() {
         message,
         type,
       };
-      setLogs(prev => [...prev, newLog]);
+      setLogs((prev: LogMessage[]) => [...prev, newLog]);
     };
 
   const handleGeneratePacket = async () => {
@@ -194,7 +194,7 @@ function App() {
                 <p className="no-logs">No events yet. Click the button above to start the simulation!</p>
               ) : (
                 <div className="logs">
-                  {logs.map(log => (
+                  {logs.map((log: LogMessage) => (
                     <div key={log.id} className={`log-entry ${log.type}`}>
                       <span className="timestamp">[{log.timestamp}]</span>
                       <span className="message">{log.message}</span>
