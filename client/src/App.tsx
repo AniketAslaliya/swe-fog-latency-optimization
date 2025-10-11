@@ -19,7 +19,7 @@
   6. Click "Deploy". Vercel will build and host your React application. The live site will now correctly communicate with your live Firebase backend.
 */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { apiService, DataPacket } from './services/api';
 import { authService, AuthUser } from './services/auth';
 import './App.css';
