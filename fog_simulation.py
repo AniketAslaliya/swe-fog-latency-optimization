@@ -13,7 +13,7 @@ import simpy
 import random
 import math
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass
 from enum import Enum
 
@@ -38,6 +38,122 @@ class OffloadDecision(Enum):
     """Enumeration for task offloading decisions."""
     PROCESS_LOCALLY = "process_locally"
     OFFLOAD_TO_CLOUD = "offload_to_cloud"
+
+
+# Global performance monitoring and logging system
+class PerformanceLogger:
+    """Global performance monitoring and data logging system."""
+    
+    def __init__(self):
+        self.task_events: List[Dict[str, Any]] = []
+        self.resource_monitoring: List[Dict[str, Any]] = []
+        self.simulation_metrics: Dict[str, Any] = {}
+    
+    def log_task_event(self, event_type: str, task_id: str, timestamp: float, 
+                      task_complexity: float = None, decision_made: str = None, 
+                      processing_location: str = None, additional_data: Dict[str, Any] = None):
+        """
+        Log a task event with detailed information.
+        
+        Args:
+            event_type: Type of event (creation, arrival, decision, etc.)
+            task_id: Unique task identifier
+            timestamp: Simulation time when event occurred
+            task_complexity: Task complexity in MIPS
+            decision_made: Offloading decision made
+            processing_location: Where task is being processed
+            additional_data: Any additional event-specific data
+        """
+        event = {
+            'event_type': event_type,
+            'task_id': task_id,
+            'timestamp': timestamp,
+            'task_complexity': task_complexity,
+            'decision_made': decision_made,
+            'processing_location': processing_location,
+            'additional_data': additional_data or {}
+        }
+        self.task_events.append(event)
+    
+    def log_resource_utilization(self, timestamp: float, node_id: str, 
+                               utilization: float, queue_length: int, 
+                               processing_capacity: int, node_type: str):
+        """
+        Log resource utilization for a node.
+        
+        Args:
+            timestamp: Simulation time
+            node_id: Node identifier
+            utilization: CPU utilization percentage
+            queue_length: Number of pending tasks
+            processing_capacity: Total processing capacity
+            node_type: Type of node (fog, cloud)
+        """
+        resource_log = {
+            'timestamp': timestamp,
+            'node_id': node_id,
+            'utilization': utilization,
+            'queue_length': queue_length,
+            'processing_capacity': processing_capacity,
+            'node_type': node_type
+        }
+        self.resource_monitoring.append(resource_log)
+    
+    def get_task_lifecycle(self, task_id: str) -> List[Dict[str, Any]]:
+        """Get complete lifecycle events for a specific task."""
+        return [event for event in self.task_events if event['task_id'] == task_id]
+    
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get comprehensive performance summary."""
+        if not self.task_events:
+            return {}
+        
+        # Calculate task lifecycle metrics
+        task_lifecycles = {}
+        for event in self.task_events:
+            task_id = event['task_id']
+            if task_id not in task_lifecycles:
+                task_lifecycles[task_id] = {}
+            task_lifecycles[task_id][event['event_type']] = event['timestamp']
+        
+        # Calculate performance metrics
+        response_times = []
+        processing_times = []
+        decision_times = []
+        
+        for task_id, lifecycle in task_lifecycles.items():
+            if 'creation_time' in lifecycle and 'response_delivery_time' in lifecycle:
+                response_time = lifecycle['response_delivery_time'] - lifecycle['creation_time']
+                response_times.append(response_time)
+            
+            if 'processing_start_time' in lifecycle and 'processing_end_time' in lifecycle:
+                processing_time = lifecycle['processing_end_time'] - lifecycle['processing_start_time']
+                processing_times.append(processing_time)
+            
+            if 'creation_time' in lifecycle and 'decision_time' in lifecycle:
+                decision_time = lifecycle['decision_time'] - lifecycle['creation_time']
+                decision_times.append(decision_time)
+        
+        return {
+            'total_events': len(self.task_events),
+            'total_tasks': len(task_lifecycles),
+            'average_response_time': sum(response_times) / len(response_times) if response_times else 0,
+            'average_processing_time': sum(processing_times) / len(processing_times) if processing_times else 0,
+            'average_decision_time': sum(decision_times) / len(decision_times) if decision_times else 0,
+            'resource_monitoring_entries': len(self.resource_monitoring)
+        }
+    
+    def export_data(self) -> Dict[str, Any]:
+        """Export all logged data for analysis."""
+        return {
+            'task_events': self.task_events,
+            'resource_monitoring': self.resource_monitoring,
+            'performance_summary': self.get_performance_summary()
+        }
+
+
+# Global logger instance
+global_logger = PerformanceLogger()
 
 
 @dataclass
@@ -105,6 +221,13 @@ class Task:
         self.offload_reason: Optional[str] = None
         self.cloud_transmission_time: Optional[float] = None
         self.cloud_network_latency: float = 0.0
+        
+        # Performance monitoring timestamps
+        self.arrival_at_fog_time: Optional[float] = None
+        self.decision_time: Optional[float] = None
+        self.processing_start_time: Optional[float] = None
+        self.processing_end_time: Optional[float] = None
+        self.response_delivery_time: Optional[float] = None
         
     def __str__(self):
         return (f"Task {self.task_id} from {self.source_device_id} "
@@ -214,6 +337,15 @@ class IoTDevice:
             deadline=deadline,
             source_device_id=self.device_id,
             data_size=data_size
+        )
+        
+        # Log task creation event
+        global_logger.log_task_event(
+            event_type='creation_time',
+            task_id=task.task_id,
+            timestamp=self.env.now,
+            task_complexity=complexity,
+            processing_location=self.device_id
         )
         
         return task
@@ -399,6 +531,16 @@ class FogNode:
         print(f"📥 {self.node_id}: Received task {task.task_id} from {task.source_device_id}")
         self.pending_tasks.append(task)
         
+        # Log task arrival at fog node
+        task.arrival_at_fog_time = self.env.now
+        global_logger.log_task_event(
+            event_type='arrival_at_fog_time',
+            task_id=task.task_id,
+            timestamp=self.env.now,
+            task_complexity=task.complexity_mips,
+            processing_location=self.node_id
+        )
+        
         # Start processing the task
         if self.env:
             self.env.process(self.handle_task(task))
@@ -423,6 +565,18 @@ class FogNode:
             decision, reason = self.decision_engine(task)
             task.offload_decision = decision
             task.offload_reason = reason
+            
+            # Log decision time
+            task.decision_time = self.env.now
+            global_logger.log_task_event(
+                event_type='decision_time',
+                task_id=task.task_id,
+                timestamp=self.env.now,
+                task_complexity=task.complexity_mips,
+                decision_made=decision.value,
+                processing_location=self.node_id,
+                additional_data={'reason': reason}
+            )
             
             print(f"🧠 {self.node_id}: Decision for task {task.task_id}: {decision.value}")
             print(f"   Reason: {reason}")
@@ -489,6 +643,17 @@ class FogNode:
         task.start_time = self.env.now
         task.processing_node = self.node_id
         
+        # Log processing start time
+        task.processing_start_time = self.env.now
+        global_logger.log_task_event(
+            event_type='processing_start_time',
+            task_id=task.task_id,
+            timestamp=self.env.now,
+            task_complexity=task.complexity_mips,
+            decision_made=task.offload_decision.value if task.offload_decision else None,
+            processing_location=self.node_id
+        )
+        
         with self.processing_capacity.request() as cpu_request:
             # Wait for CPU resource
             yield cpu_request
@@ -502,6 +667,18 @@ class FogNode:
             # Task completed
             task.status = TaskStatus.COMPLETED
             task.completion_time = self.env.now
+            
+            # Log processing end time
+            task.processing_end_time = self.env.now
+            global_logger.log_task_event(
+                event_type='processing_end_time',
+                task_id=task.task_id,
+                timestamp=self.env.now,
+                task_complexity=task.complexity_mips,
+                decision_made=task.offload_decision.value if task.offload_decision else None,
+                processing_location=self.node_id,
+                additional_data={'processing_time': processing_time}
+            )
             
             # Update statistics
             self.tasks_processed += 1
@@ -572,6 +749,16 @@ class CloudServer:
         print(f"☁️ {self.server_id}: Received offloaded task {task.task_id} from fog node")
         self.pending_tasks.append(task)
         
+        # Log task arrival at cloud server
+        global_logger.log_task_event(
+            event_type='arrival_at_cloud_time',
+            task_id=task.task_id,
+            timestamp=self.env.now,
+            task_complexity=task.complexity_mips,
+            decision_made=task.offload_decision.value if task.offload_decision else None,
+            processing_location=self.server_id
+        )
+        
         # Start processing the task
         if self.env:
             self.env.process(self.handle_task(task))
@@ -598,6 +785,17 @@ class CloudServer:
             task.start_time = self.env.now
             task.processing_node = self.server_id
             
+            # Log processing start time
+            task.processing_start_time = self.env.now
+            global_logger.log_task_event(
+                event_type='processing_start_time',
+                task_id=task.task_id,
+                timestamp=self.env.now,
+                task_complexity=task.complexity_mips,
+                decision_made=task.offload_decision.value if task.offload_decision else None,
+                processing_location=self.server_id
+            )
+            
             with self.processing_capacity.request() as cpu_request:
                 # Wait for CPU resource
                 yield cpu_request
@@ -611,6 +809,18 @@ class CloudServer:
                 # Task completed
                 task.status = TaskStatus.COMPLETED
                 task.completion_time = self.env.now
+                
+                # Log processing end time
+                task.processing_end_time = self.env.now
+                global_logger.log_task_event(
+                    event_type='processing_end_time',
+                    task_id=task.task_id,
+                    timestamp=self.env.now,
+                    task_complexity=task.complexity_mips,
+                    decision_made=task.offload_decision.value if task.offload_decision else None,
+                    processing_location=self.server_id,
+                    additional_data={'processing_time': processing_time}
+                )
                 
                 # Update statistics
                 self.tasks_processed += 1
@@ -801,6 +1011,43 @@ class FogComputingSimulation:
             self.env.process(iot_device.task_generation_process())
             print(f"   ✓ Started task generation for {iot_device.device_id}")
     
+    def resource_monitoring_process(self):
+        """
+        SimPy process that periodically monitors and logs resource utilization.
+        """
+        while True:
+            # Monitor fog nodes
+            for fog_node in self.fog_nodes:
+                utilization = fog_node.get_utilization()
+                queue_length = len(fog_node.pending_tasks)
+                capacity = fog_node.processing_capacity.capacity if fog_node.processing_capacity else 0
+                
+                global_logger.log_resource_utilization(
+                    timestamp=self.env.now,
+                    node_id=fog_node.node_id,
+                    utilization=utilization,
+                    queue_length=queue_length,
+                    processing_capacity=capacity,
+                    node_type='fog'
+                )
+            
+            # Monitor cloud server
+            cloud_utilization = self.cloud_server.get_utilization()
+            cloud_queue_length = len(self.cloud_server.pending_tasks)
+            cloud_capacity = self.cloud_server.processing_capacity.capacity if self.cloud_server.processing_capacity else 0
+            
+            global_logger.log_resource_utilization(
+                timestamp=self.env.now,
+                node_id=self.cloud_server.server_id,
+                utilization=cloud_utilization,
+                queue_length=cloud_queue_length,
+                processing_capacity=cloud_capacity,
+                node_type='cloud'
+            )
+            
+            # Wait before next monitoring cycle
+            yield self.env.timeout(1.0)  # Monitor every 1 simulation time unit
+    
     def run_simulation(self):
         """Run the simulation for the specified duration."""
         print(f"\n🚀 Starting Simulation for {self.simulation_time} seconds...")
@@ -808,6 +1055,11 @@ class FogComputingSimulation:
         
         # Start task generation
         self.start_task_generation()
+        
+        # Start resource monitoring process
+        print("\n📊 Starting Resource Monitoring...")
+        self.env.process(self.resource_monitoring_process())
+        print("   ✓ Started resource utilization monitoring")
         
         self.start_time = self.env.now
         self.env.run(until=self.simulation_time)
@@ -879,6 +1131,21 @@ class FogComputingSimulation:
             print(f"   Average response time: {avg_response_time:.3f}s")
         
         print(f"\n⏱️  Simulation Duration: {self.end_time - self.start_time:.2f} seconds")
+        
+        # Print performance monitoring summary
+        print(f"\n📈 Performance Monitoring Summary:")
+        performance_summary = global_logger.get_performance_summary()
+        if performance_summary:
+            print(f"   Total events logged: {performance_summary.get('total_events', 0)}")
+            print(f"   Total tasks tracked: {performance_summary.get('total_tasks', 0)}")
+            print(f"   Average response time: {performance_summary.get('average_response_time', 0):.3f}s")
+            print(f"   Average processing time: {performance_summary.get('average_processing_time', 0):.3f}s")
+            print(f"   Average decision time: {performance_summary.get('average_decision_time', 0):.3f}s")
+            print(f"   Resource monitoring entries: {performance_summary.get('resource_monitoring_entries', 0)}")
+        
+        print(f"\n🎉 Simulation setup and execution completed successfully!")
+        print("✅ Task generation and processing logic implemented!")
+        print("✅ Performance monitoring and data logging implemented!")
     
     def setup_simulation(self, num_fog_nodes: int = 3, num_iot_devices: int = 10):
         """Complete setup of the simulation environment."""
