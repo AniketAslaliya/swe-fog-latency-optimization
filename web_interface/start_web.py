@@ -28,15 +28,39 @@ def install_dependencies():
     """Install required Python packages."""
     print("\n📦 Installing Python dependencies...")
     
+    # Try simple requirements first
     try:
         subprocess.check_call([
-            sys.executable, "-m", "pip", "install", "-r", "requirements.txt"
+            sys.executable, "-m", "pip", "install", "-r", "requirements_simple.txt"
         ])
-        print("✅ Dependencies installed successfully")
+        print("✅ Core dependencies installed successfully")
+        
+        # Try to install optional dependencies
+        try:
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", "pandas", "matplotlib", "seaborn", "numpy"
+            ])
+            print("✅ Optional dependencies installed successfully")
+        except subprocess.CalledProcessError:
+            print("⚠️  Optional dependencies failed to install, but core functionality will work")
+        
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to install dependencies: {e}")
-        return False
+        print(f"❌ Failed to install core dependencies: {e}")
+        print("💡 Trying alternative installation method...")
+        
+        # Try installing packages individually
+        packages = ["Flask", "Flask-CORS", "Werkzeug", "simpy", "requests"]
+        for package in packages:
+            try:
+                subprocess.check_call([
+                    sys.executable, "-m", "pip", "install", package
+                ])
+                print(f"✅ {package} installed")
+            except subprocess.CalledProcessError:
+                print(f"⚠️  {package} installation failed")
+        
+        return True
 
 def setup_configuration():
     """Setup configuration files."""
@@ -70,8 +94,15 @@ def start_server():
     print("=" * 60)
     
     try:
-        # Start the Flask app
-        from app import app
+        # Try to start the full Flask app first
+        try:
+            from app import app
+            print("✅ Using full version with all features")
+        except ImportError:
+            # Fall back to minimal version
+            from app_minimal import app
+            print("⚠️  Using minimal version (some features may be limited)")
+        
         app.run(debug=False, host='0.0.0.0', port=5000)
     except KeyboardInterrupt:
         print("\n\n🛑 Server stopped by user")
