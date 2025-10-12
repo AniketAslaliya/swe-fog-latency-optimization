@@ -1,0 +1,62 @@
+{
+  "simulation": {
+    "duration": 100.0,
+    "random_seed": 42,
+    "enable_node_failures": true,
+    "failure_probability": 0.1,
+    "failure_duration_range": [5.0, 15.0]
+  },
+  "network_topology": {
+    "num_fog_nodes": 3,
+    "num_iot_devices": 10,
+    "cloud_server": {
+      "location": {"x": 50, "y": 50},
+      "resources": {
+        "cpu_mips": 10000,
+        "memory_mb": 32000,
+        "storage_mb": 1000000
+      }
+    },
+    "fog_nodes": {
+      "locations": [
+        {"x": 20, "y": 20},
+        {"x": 80, "y": 20},
+        {"x": 50, "y": 80}
+      ],
+      "resources_range": {
+        "cpu_mips": {"min": 1000, "max": 3000},
+        "memory_mb": {"min": 4000, "max": 8000},
+        "storage_mb": {"min": 100000, "max": 500000}
+      }
+    },
+    "iot_devices": {
+      "resources_range": {
+        "cpu_mips": {"min": 50, "max": 200},
+        "memory_mb": {"min": 256, "max": 1024},
+        "storage_mb": {"min": 1000, "max": 10000}
+      }
+    }
+  },
+  "task_generation": {
+    "generation_rate_range": [0.1, 0.3],
+    "complexity_range": [50, 2000],
+    "deadline_range": [5, 30],
+    "data_size_range": [100, 1000]
+  },
+  "network_latency": {
+    "base_latency_per_distance": 0.01,
+    "cloud_latency_base": 5.0,
+    "fog_to_cloud_multiplier": 0.02
+  },
+  "offloading_parameters": {
+    "complexity_threshold": 1000.0,
+    "utilization_threshold": 0.8,
+    "deadline_threshold": 5.0,
+    "queue_length_threshold": 5
+  },
+  "performance_monitoring": {
+    "monitoring_interval": 1.0,
+    "enable_detailed_logging": true,
+    "export_data": true
+  }
+}
