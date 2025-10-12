@@ -34,6 +34,12 @@ class TaskStatus(Enum):
     TIMEOUT = "timeout"
 
 
+class OffloadDecision(Enum):
+    """Enumeration for task offloading decisions."""
+    PROCESS_LOCALLY = "process_locally"
+    OFFLOAD_TO_CLOUD = "offload_to_cloud"
+
+
 @dataclass
 class Location:
     """Represents a 2D location in the simulation environment."""
@@ -93,6 +99,12 @@ class Task:
         # Network transmission information
         self.transmission_time: Optional[float] = None
         self.network_latency: float = 0.0
+        
+        # Offloading information
+        self.offload_decision: Optional[OffloadDecision] = None
+        self.offload_reason: Optional[str] = None
+        self.cloud_transmission_time: Optional[float] = None
+        self.cloud_network_latency: float = 0.0
         
     def __str__(self):
         return (f"Task {self.task_id} from {self.source_device_id} "
@@ -303,6 +315,12 @@ class FogNode:
         self.total_processing_time = 0.0
         self.pending_tasks: List[Task] = []
         
+        # Offloading decision parameters
+        self.cloud_latency = 5.0  # Predefined cloud network latency
+        self.complexity_threshold = 1000.0  # MIPS threshold for offloading
+        self.utilization_threshold = 0.8  # CPU utilization threshold
+        self.deadline_threshold = 5.0  # Time units before deadline
+        
     def __str__(self):
         return f"Fog Node {self.node_id} at {self.location} with {self.computational_resources}"
     
@@ -316,6 +334,60 @@ class FogNode:
         if self.processing_capacity:
             return 1.0 - (self.processing_capacity.capacity - self.processing_capacity.count) / self.processing_capacity.capacity
         return 0.0
+    
+    def decision_engine(self, task: Task) -> tuple[OffloadDecision, str]:
+        """
+        Intelligent decision engine for task offloading.
+        
+        Analyzes task characteristics and node state to decide whether to process
+        locally or offload to cloud.
+        
+        Args:
+            task: The task to be processed
+            
+        Returns:
+            Tuple of (decision, reason)
+        """
+        current_time = self.env.now
+        current_utilization = self.get_utilization()
+        time_to_deadline = task.deadline - current_time
+        
+        # Decision factors
+        factors = {
+            'task_complexity': task.complexity_mips,
+            'cpu_utilization': current_utilization,
+            'time_to_deadline': time_to_deadline,
+            'queue_length': len(self.pending_tasks)
+        }
+        
+        # Rule-based decision logic
+        reasons = []
+        
+        # Factor 1: Task complexity
+        if task.complexity_mips > self.complexity_threshold:
+            reasons.append(f"High complexity ({task.complexity_mips:.0f} > {self.complexity_threshold:.0f} MIPS)")
+        
+        # Factor 2: CPU utilization
+        if current_utilization > self.utilization_threshold:
+            reasons.append(f"High CPU utilization ({current_utilization:.1%} > {self.utilization_threshold:.1%})")
+        
+        # Factor 3: Tight deadline
+        if time_to_deadline < self.deadline_threshold:
+            reasons.append(f"Tight deadline ({time_to_deadline:.1f}s < {self.deadline_threshold:.1f}s)")
+        
+        # Factor 4: Queue length
+        if len(self.pending_tasks) > 5:
+            reasons.append(f"Long queue ({len(self.pending_tasks)} tasks)")
+        
+        # Decision logic: Offload if any critical factor is met
+        if reasons:
+            decision = OffloadDecision.OFFLOAD_TO_CLOUD
+            reason = f"Offload due to: {', '.join(reasons)}"
+        else:
+            decision = OffloadDecision.PROCESS_LOCALLY
+            reason = f"Process locally - complexity: {task.complexity_mips:.0f} MIPS, utilization: {current_utilization:.1%}, deadline: {time_to_deadline:.1f}s"
+        
+        return decision, reason
     
     def receive_task(self, task: Task):
         """
@@ -347,38 +419,97 @@ class FogNode:
                 self.tasks_failed += 1
                 return
             
-            # Request CPU resource
-            print(f"🔄 {self.node_id}: Starting processing of task {task.task_id}")
-            task.status = TaskStatus.PROCESSING
-            task.start_time = self.env.now
-            task.processing_node = self.node_id
+            # Run decision engine
+            decision, reason = self.decision_engine(task)
+            task.offload_decision = decision
+            task.offload_reason = reason
             
-            with self.processing_capacity.request() as cpu_request:
-                # Wait for CPU resource
-                yield cpu_request
-                
-                # Calculate processing time
-                processing_time = task.get_processing_time(self.computational_resources.cpu_mips)
-                
-                # Simulate processing delay
-                yield self.env.timeout(processing_time)
-                
-                # Task completed
-                task.status = TaskStatus.COMPLETED
-                task.completion_time = self.env.now
-                
-                # Update statistics
-                self.tasks_processed += 1
-                self.total_processing_time += processing_time
-                
-                print(f"✅ {self.node_id}: Completed task {task.task_id} "
-                      f"(processing time: {processing_time:.3f}s, "
-                      f"total time: {task.get_response_time():.3f}s)")
+            print(f"🧠 {self.node_id}: Decision for task {task.task_id}: {decision.value}")
+            print(f"   Reason: {reason}")
+            
+            if decision == OffloadDecision.OFFLOAD_TO_CLOUD:
+                # Offload to cloud
+                self.offload_task_to_cloud(task)
+            else:
+                # Process locally
+                yield from self.process_task_locally(task)
                 
         except Exception as e:
             print(f"❌ {self.node_id}: Error processing task {task.task_id}: {e}")
             task.status = TaskStatus.FAILED
             self.tasks_failed += 1
+    
+    def offload_task_to_cloud(self, task: Task):
+        """
+        Offload a task to the cloud server.
+        
+        Args:
+            task: The task to be offloaded
+        """
+        if not self.connected_cloud_server:
+            print(f"❌ {self.node_id}: No cloud server connected, cannot offload task {task.task_id}")
+            task.status = TaskStatus.FAILED
+            self.tasks_failed += 1
+            return
+        
+        try:
+            # Set offload decision
+            task.offload_decision = OffloadDecision.OFFLOAD_TO_CLOUD
+            
+            # Simulate network latency to cloud
+            distance = self.location.distance_to(self.connected_cloud_server.location)
+            cloud_latency = distance * 0.02 + self.cloud_latency  # Additional cloud latency
+            
+            # Update task with cloud transmission information
+            task.cloud_network_latency = cloud_latency
+            task.cloud_transmission_time = self.env.now + cloud_latency
+            
+            # Send task to cloud server
+            self.connected_cloud_server.receive_task(task)
+            self.tasks_offloaded += 1
+            
+            print(f"☁️ {self.node_id}: Offloaded task {task.task_id} to cloud "
+                  f"(latency: {cloud_latency:.3f}s)")
+            
+        except Exception as e:
+            print(f"❌ {self.node_id}: Failed to offload task {task.task_id}: {e}")
+            task.status = TaskStatus.FAILED
+            self.tasks_failed += 1
+    
+    def process_task_locally(self, task: Task):
+        """
+        Process a task locally on the fog node.
+        
+        Args:
+            task: The task to be processed
+        """
+        # Request CPU resource
+        print(f"🔄 {self.node_id}: Starting local processing of task {task.task_id}")
+        task.status = TaskStatus.PROCESSING
+        task.start_time = self.env.now
+        task.processing_node = self.node_id
+        
+        with self.processing_capacity.request() as cpu_request:
+            # Wait for CPU resource
+            yield cpu_request
+            
+            # Calculate processing time
+            processing_time = task.get_processing_time(self.computational_resources.cpu_mips)
+            
+            # Simulate processing delay
+            yield self.env.timeout(processing_time)
+            
+            # Task completed
+            task.status = TaskStatus.COMPLETED
+            task.completion_time = self.env.now
+            
+            # Update statistics
+            self.tasks_processed += 1
+            self.total_processing_time += processing_time
+            
+            print(f"✅ {self.node_id}: Completed task {task.task_id} locally "
+                  f"(processing time: {processing_time:.3f}s, "
+                  f"total time: {task.get_response_time():.3f}s)")
     
     def get_task_statistics(self) -> dict:
         """Get comprehensive task processing statistics."""
@@ -403,7 +534,7 @@ class CloudServer:
     """
     
     def __init__(self, server_id: str, location: Location, 
-                 computational_resources: ComputationalResources):
+                 computational_resources: ComputationalResources, env: Optional[simpy.Environment] = None):
         """
         Initialize a cloud server.
         
@@ -411,21 +542,106 @@ class CloudServer:
             server_id: Unique identifier for the cloud server
             location: Physical location of the cloud server
             computational_resources: Available computational resources
+            env: SimPy environment for task processing
         """
         self.server_id = server_id
         self.location = location
         self.computational_resources = computational_resources
         self.device_type = DeviceType.CLOUD_SERVER
+        self.env = env
         
         # SimPy resource for processing capacity
         self.processing_capacity = None  # Will be set by the simulation environment
         
         # Performance metrics
         self.tasks_processed = 0
+        self.tasks_failed = 0
         self.total_processing_time = 0.0
+        self.pending_tasks: List[Task] = []
         
     def __str__(self):
         return f"Cloud Server {self.server_id} at {self.location} with {self.computational_resources}"
+    
+    def receive_task(self, task: Task):
+        """
+        Receive a task from a fog node and add it to the processing queue.
+        
+        Args:
+            task: The task to be processed
+        """
+        print(f"☁️ {self.server_id}: Received offloaded task {task.task_id} from fog node")
+        self.pending_tasks.append(task)
+        
+        # Start processing the task
+        if self.env:
+            self.env.process(self.handle_task(task))
+    
+    def handle_task(self, task: Task):
+        """
+        Handle a task by processing it on the cloud server.
+        This is a SimPy process that manages task execution.
+        
+        Args:
+            task: The task to be processed
+        """
+        try:
+            # Check if task is overdue
+            if task.is_overdue(self.env.now):
+                print(f"⏰ {self.server_id}: Task {task.task_id} is overdue, marking as timeout")
+                task.status = TaskStatus.TIMEOUT
+                self.tasks_failed += 1
+                return
+            
+            # Request CPU resource
+            print(f"🔄 {self.server_id}: Starting cloud processing of task {task.task_id}")
+            task.status = TaskStatus.PROCESSING
+            task.start_time = self.env.now
+            task.processing_node = self.server_id
+            
+            with self.processing_capacity.request() as cpu_request:
+                # Wait for CPU resource
+                yield cpu_request
+                
+                # Calculate processing time (cloud has higher CPU capacity)
+                processing_time = task.get_processing_time(self.computational_resources.cpu_mips)
+                
+                # Simulate processing delay
+                yield self.env.timeout(processing_time)
+                
+                # Task completed
+                task.status = TaskStatus.COMPLETED
+                task.completion_time = self.env.now
+                
+                # Update statistics
+                self.tasks_processed += 1
+                self.total_processing_time += processing_time
+                
+                print(f"✅ {self.server_id}: Completed offloaded task {task.task_id} "
+                      f"(processing time: {processing_time:.3f}s, "
+                      f"total time: {task.get_response_time():.3f}s)")
+                
+        except Exception as e:
+            print(f"❌ {self.server_id}: Error processing task {task.task_id}: {e}")
+            task.status = TaskStatus.FAILED
+            self.tasks_failed += 1
+    
+    def get_utilization(self) -> float:
+        """Calculate current resource utilization."""
+        if self.processing_capacity:
+            return 1.0 - (self.processing_capacity.capacity - self.processing_capacity.count) / self.processing_capacity.capacity
+        return 0.0
+    
+    def get_task_statistics(self) -> dict:
+        """Get comprehensive task processing statistics."""
+        return {
+            'tasks_processed': self.tasks_processed,
+            'tasks_failed': self.tasks_failed,
+            'total_processing_time': self.total_processing_time,
+            'average_processing_time': (self.total_processing_time / self.tasks_processed 
+                                      if self.tasks_processed > 0 else 0.0),
+            'pending_tasks': len(self.pending_tasks),
+            'utilization': self.get_utilization()
+        }
 
 
 class FogComputingSimulation:
@@ -474,7 +690,8 @@ class FogComputingSimulation:
                 cpu_mips=10000,  # 10,000 MIPS
                 memory=32000,    # 32 GB
                 storage=1000000   # 1 TB
-            )
+            ),
+            env=self.env
         )
         
         # Create fog nodes (distributed, moderate resources)
@@ -619,20 +836,37 @@ class FogComputingSimulation:
         for i, fog_node in enumerate(self.fog_nodes, 1):
             stats = fog_node.get_task_statistics()
             print(f"   Fog Node {i} ({fog_node.node_id}):")
-            print(f"      Tasks processed: {stats['tasks_processed']}")
+            print(f"      Tasks processed locally: {stats['tasks_processed']}")
+            print(f"      Tasks offloaded to cloud: {stats['tasks_offloaded']}")
             print(f"      Tasks failed: {stats['tasks_failed']}")
             print(f"      Average processing time: {stats['average_processing_time']:.3f}s")
             print(f"      Resource utilization: {stats['utilization']:.1%}")
             print(f"      Pending tasks: {stats['pending_tasks']}")
         
+        # Cloud server statistics
+        print(f"\n☁️  Cloud Server Statistics:")
+        cloud_stats = self.cloud_server.get_task_statistics()
+        print(f"   Cloud Server ({self.cloud_server.server_id}):")
+        print(f"      Tasks processed: {cloud_stats['tasks_processed']}")
+        print(f"      Tasks failed: {cloud_stats['tasks_failed']}")
+        print(f"      Average processing time: {cloud_stats['average_processing_time']:.3f}s")
+        print(f"      Resource utilization: {cloud_stats['utilization']:.1%}")
+        print(f"      Pending tasks: {cloud_stats['pending_tasks']}")
+        
         # Overall network statistics
         total_fog_processed = sum(fog.tasks_processed for fog in self.fog_nodes)
+        total_fog_offloaded = sum(fog.tasks_offloaded for fog in self.fog_nodes)
         total_fog_failed = sum(fog.tasks_failed for fog in self.fog_nodes)
+        total_cloud_processed = self.cloud_server.tasks_processed
+        total_cloud_failed = self.cloud_server.tasks_failed
         
         print(f"\n🌐 Network Performance:")
         print(f"   Total tasks processed by fog nodes: {total_fog_processed}")
-        print(f"   Total tasks failed: {total_fog_failed}")
-        print(f"   Fog processing success rate: {(total_fog_processed / (total_fog_processed + total_fog_failed) * 100):.1f}%" if (total_fog_processed + total_fog_failed) > 0 else "   Fog processing success rate: 0%")
+        print(f"   Total tasks offloaded to cloud: {total_fog_offloaded}")
+        print(f"   Total tasks processed by cloud: {total_cloud_processed}")
+        print(f"   Total tasks failed: {total_fog_failed + total_cloud_failed}")
+        print(f"   Offloading rate: {(total_fog_offloaded / (total_fog_processed + total_fog_offloaded) * 100):.1f}%" if (total_fog_processed + total_fog_offloaded) > 0 else "   Offloading rate: 0%")
+        print(f"   Overall processing success rate: {((total_fog_processed + total_cloud_processed) / (total_fog_processed + total_fog_offloaded + total_fog_failed + total_cloud_failed) * 100):.1f}%" if (total_fog_processed + total_fog_offloaded + total_fog_failed + total_cloud_failed) > 0 else "   Overall processing success rate: 0%")
         
         # Calculate average response time
         all_tasks = []
