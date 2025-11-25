@@ -35,14 +35,28 @@ if vercel_url:
 # Add custom frontend URL from environment variable
 frontend_url = os.environ.get('FRONTEND_URL')
 if frontend_url:
+    # Handle multiple formats
+    if not frontend_url.startswith('http'):
+        frontend_url = f"https://{frontend_url}"
     allowed_origins.append(frontend_url)
+    # Also add without protocol if needed
+    if frontend_url.startswith('https://'):
+        allowed_origins.append(frontend_url.replace('https://', 'http://'))
 
-# Allow all origins in development, specific origins in production
-if os.environ.get('FLASK_ENV') == 'development' or not os.environ.get('RENDER'):
-    CORS(app, origins=allowed_origins, supports_credentials=True)
+# CORS configuration - more permissive for production
+if os.environ.get('RENDER'):
+    # In production (Render), allow all Vercel domains
+    # This handles preview deployments and production deployments
+    CORS(app, 
+         origins=["*"],  # Allow all origins in production (Vercel uses dynamic URLs)
+         supports_credentials=False,  # Don't need credentials for API
+         allow_headers=['Content-Type', 'Authorization', 'Accept'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
+    print("🌐 CORS: Allowing all origins (production mode)")
 else:
-    # In production (Render), only allow specific origins
+    # Development mode - specific origins
     CORS(app, origins=allowed_origins, supports_credentials=True)
+    print(f"🌐 CORS: Allowing specific origins: {', '.join(allowed_origins)}")
 
 # Priority weights for scheduling
 PRIORITY_WEIGHTS = {
@@ -362,6 +376,15 @@ def process_cloud_task(current_time):
     task['processing_time'] = processing_latency / 1000  # Convert ms to seconds
     
     return processing_latency
+
+@app.route('/api/health')
+def health_check():
+    """Simple health check endpoint for connection testing."""
+    return jsonify({
+        'status': 'ok',
+        'service': 'fog-computing-backend',
+        'timestamp': datetime.now().isoformat()
+    }), 200
 
 @app.route('/api/status')
 def get_status():

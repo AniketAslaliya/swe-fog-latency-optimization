@@ -8,18 +8,28 @@ export default function BackendStatus() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
+        // Use status endpoint (exists in all versions)
+        const endpoint = getApiEndpoint('/status')
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 2000) // 2 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout for Render (may be sleeping)
         
-        const res = await fetch(getApiEndpoint('/status'), { 
+        const res = await fetch(endpoint, { 
           method: 'GET',
-          signal: controller.signal
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          mode: 'cors' // Explicitly allow CORS
         })
         
         clearTimeout(timeoutId)
         setIsConnected(res.ok)
       } catch (error) {
         setIsConnected(false)
+        // Log error for debugging
+        if (error.name !== 'AbortError') {
+          console.error('Backend connection error:', error.message, 'Endpoint:', getApiEndpoint('/health'))
+        }
       } finally {
         setChecking(false)
       }
