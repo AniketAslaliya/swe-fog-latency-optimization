@@ -15,14 +15,16 @@ export const apiUrl = getApiUrl()
 // Helper to get full API endpoint URL
 export const getApiEndpoint = (endpoint) => {
   const baseUrl = getApiUrl()
-  // Remove leading slash from endpoint if present
+  // Ensure endpoint starts with /
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
   
   if (baseUrl) {
-    // Production: use full URL
-    return `${baseUrl}${cleanEndpoint}`
+    // Production: use full URL with /api prefix
+    // Remove trailing slash from baseUrl if present
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+    return `${cleanBaseUrl}/api${cleanEndpoint}`
   }
-  // Development: use proxy path
+  // Development: use proxy path (Vite proxy handles /api -> localhost:5000)
   return `/api${cleanEndpoint}`
 }
 
