@@ -18,11 +18,31 @@ import random
 import heapq
 
 app = Flask(__name__)
-# CORS Configuration - Allow frontend on port 3000
-CORS(app, origins=[
+
+# CORS Configuration
+# Allow localhost for development and Vercel domains for production
+import os
+allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000"
-])
+]
+
+# Add Vercel preview and production URLs from environment variable
+vercel_url = os.environ.get('VERCEL_URL')
+if vercel_url:
+    allowed_origins.append(f"https://{vercel_url}")
+
+# Add custom frontend URL from environment variable
+frontend_url = os.environ.get('FRONTEND_URL')
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
+# Allow all origins in development, specific origins in production
+if os.environ.get('FLASK_ENV') == 'development' or not os.environ.get('RENDER'):
+    CORS(app, origins=allowed_origins, supports_credentials=True)
+else:
+    # In production (Render), only allow specific origins
+    CORS(app, origins=allowed_origins, supports_credentials=True)
 
 # Priority weights for scheduling
 PRIORITY_WEIGHTS = {
@@ -1033,10 +1053,15 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     print("🌐 Starting Fog Computing Simulator Backend API")
     print("=" * 60)
-    print("📡 API Server: http://localhost:5000")
-    print("🔗 CORS enabled for: http://localhost:3000")
+    print(f"📡 API Server: http://0.0.0.0:{port}")
+    if os.environ.get('RENDER'):
+        print("🚀 Running on Render (Production)")
+    else:
+        print("🔧 Running in Development Mode")
+    print(f"🔗 CORS enabled for: {', '.join(allowed_origins)}")
     print("\n💡 API Endpoints:")
     print("   • GET  /api/status")
     print("   • GET  /api/config")
@@ -1053,4 +1078,9 @@ if __name__ == '__main__':
     print("\n🛑 Press Ctrl+C to stop the server")
     print("=" * 60)
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Get port from environment variable (Render provides this) or use default 5000
+    port = int(os.environ.get('PORT', 5000))
+    # Only run in debug mode if not in production
+    debug_mode = os.environ.get('FLASK_ENV') == 'development' or not os.environ.get('RENDER')
+    
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)

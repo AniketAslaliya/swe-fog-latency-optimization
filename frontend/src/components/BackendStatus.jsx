@@ -46,7 +46,12 @@ export default function BackendStatus() {
               Backend Server Not Connected
             </h3>
             <div className="mt-2 text-sm text-red-700">
-              <p>The frontend cannot connect to the backend API at <code className="bg-red-100 px-1 rounded">http://localhost:5000</code></p>
+              <p>The frontend cannot connect to the backend API.</p>
+              <p className="text-xs mt-1">
+                {import.meta.env.VITE_API_URL 
+                  ? `Backend URL: ${import.meta.env.VITE_API_URL}`
+                  : 'Using development proxy (localhost:5000)'}
+              </p>
               <p className="mt-2 font-semibold">To fix this:</p>
               <ol className="list-decimal list-inside mt-1 space-y-1">
                 <li>Open a new terminal/command prompt</li>
