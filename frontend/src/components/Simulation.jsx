@@ -77,8 +77,15 @@ export default function Simulation() {
               </label>
               <input
                 type="number"
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
+                value={isNaN(duration) ? '' : duration}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value)
+                  if (!isNaN(val) && val > 0) {
+                    setDuration(val)
+                  } else if (e.target.value === '') {
+                    setDuration(100) // Default value
+                  }
+                }}
                 min="10"
                 max="3600"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"

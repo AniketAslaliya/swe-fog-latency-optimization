@@ -182,8 +182,13 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.network?.fog_nodes || 3}
-                  onChange={(e) => updateField('network.fog_nodes', parseInt(e.target.value))}
+                  value={formData?.network?.fog_nodes ?? 3}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    if (!isNaN(val) && val > 0) {
+                      updateField('network.fog_nodes', val)
+                    }
+                  }}
                   min="1"
                   max="20"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
@@ -195,8 +200,13 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.network?.iot_devices || 10}
-                  onChange={(e) => updateField('network.iot_devices', parseInt(e.target.value))}
+                  value={formData?.network?.iot_devices ?? 10}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    if (!isNaN(val) && val > 0) {
+                      updateField('network.iot_devices', val)
+                    }
+                  }}
                   min="1"
                   max="100"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
@@ -235,11 +245,14 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.tasks?.rate_range?.[0] || 0.1}
+                  value={isNaN(formData?.tasks?.rate_range?.[0]) ? 0.1 : (formData?.tasks?.rate_range?.[0] ?? 0.1)}
                   onChange={(e) => {
-                    const newRange = [...(formData?.tasks?.rate_range || [0.1, 0.3])]
-                    newRange[0] = parseFloat(e.target.value)
-                    updateField('tasks.rate_range', newRange)
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0) {
+                      const newRange = [...(formData?.tasks?.rate_range || [0.1, 0.3])]
+                      newRange[0] = val
+                      updateField('tasks.rate_range', newRange)
+                    }
                   }}
                   min="0.01"
                   max="1"
@@ -253,11 +266,14 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.tasks?.rate_range?.[1] || 0.3}
+                  value={isNaN(formData?.tasks?.rate_range?.[1]) ? 0.3 : (formData?.tasks?.rate_range?.[1] ?? 0.3)}
                   onChange={(e) => {
-                    const newRange = [...(formData?.tasks?.rate_range || [0.1, 0.3])]
-                    newRange[1] = parseFloat(e.target.value)
-                    updateField('tasks.rate_range', newRange)
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0) {
+                      const newRange = [...(formData?.tasks?.rate_range || [0.1, 0.3])]
+                      newRange[1] = val
+                      updateField('tasks.rate_range', newRange)
+                    }
                   }}
                   min="0.01"
                   max="1"
@@ -271,11 +287,14 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.tasks?.complexity_range?.[0] || 50}
+                  value={isNaN(formData?.tasks?.complexity_range?.[0]) ? 50 : (formData?.tasks?.complexity_range?.[0] ?? 50)}
                   onChange={(e) => {
-                    const newRange = [...(formData?.tasks?.complexity_range || [50, 2000])]
-                    newRange[0] = parseInt(e.target.value)
-                    updateField('tasks.complexity_range', newRange)
+                    const val = parseInt(e.target.value)
+                    if (!isNaN(val) && val > 0) {
+                      const newRange = [...(formData?.tasks?.complexity_range || [50, 2000])]
+                      newRange[0] = val
+                      updateField('tasks.complexity_range', newRange)
+                    }
                   }}
                   min="1"
                   max="10000"
@@ -288,11 +307,14 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.tasks?.complexity_range?.[1] || 2000}
+                  value={isNaN(formData?.tasks?.complexity_range?.[1]) ? 2000 : (formData?.tasks?.complexity_range?.[1] ?? 2000)}
                   onChange={(e) => {
-                    const newRange = [...(formData?.tasks?.complexity_range || [50, 2000])]
-                    newRange[1] = parseInt(e.target.value)
-                    updateField('tasks.complexity_range', newRange)
+                    const val = parseInt(e.target.value)
+                    if (!isNaN(val) && val > 0) {
+                      const newRange = [...(formData?.tasks?.complexity_range || [50, 2000])]
+                      newRange[1] = val
+                      updateField('tasks.complexity_range', newRange)
+                    }
                   }}
                   min="1"
                   max="10000"
@@ -310,8 +332,13 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.latency?.base_latency || 0.01}
-                  onChange={(e) => updateField('latency.base_latency', parseFloat(e.target.value))}
+                  value={isNaN(formData?.latency?.base_latency) ? 0.01 : (formData?.latency?.base_latency ?? 0.01)}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0) {
+                      updateField('latency.base_latency', val)
+                    }
+                  }}
                   min="0.001"
                   max="0.1"
                   step="0.001"
@@ -324,8 +351,13 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.latency?.cloud_latency || 5.0}
-                  onChange={(e) => updateField('latency.cloud_latency', parseFloat(e.target.value))}
+                  value={isNaN(formData?.latency?.cloud_latency) ? 5.0 : (formData?.latency?.cloud_latency ?? 5.0)}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0) {
+                      updateField('latency.cloud_latency', val)
+                    }
+                  }}
                   min="0.1"
                   max="50"
                   step="0.1"
@@ -354,8 +386,13 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.offloading?.complexity_threshold || 1000}
-                  onChange={(e) => updateField('offloading.complexity_threshold', parseInt(e.target.value))}
+                  value={isNaN(formData?.offloading?.complexity_threshold) ? 1000 : (formData?.offloading?.complexity_threshold ?? 1000)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value)
+                    if (!isNaN(val) && val > 0) {
+                      updateField('offloading.complexity_threshold', val)
+                    }
+                  }}
                   min="100"
                   max="10000"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
@@ -367,8 +404,13 @@ export default function Configuration() {
                 </label>
                 <input
                   type="number"
-                  value={formData?.offloading?.utilization_threshold || 0.8}
-                  onChange={(e) => updateField('offloading.utilization_threshold', parseFloat(e.target.value))}
+                  value={isNaN(formData?.offloading?.utilization_threshold) ? 0.8 : (formData?.offloading?.utilization_threshold ?? 0.8)}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value)
+                    if (!isNaN(val) && val >= 0 && val <= 1) {
+                      updateField('offloading.utilization_threshold', val)
+                    }
+                  }}
                   min="0.1"
                   max="1"
                   step="0.1"

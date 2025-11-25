@@ -22,28 +22,24 @@ export default function Dashboard() {
         // Silently handle - BackendStatus component shows warning
       })
     
-    const fetchStatus = () => {
-      fetch('/api/status')
-        .then(res => {
-          if (res.ok) {
-            return res.json()
-          }
-          throw new Error('Backend not responding')
-        })
-        .then(data => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/status')
+        if (res.ok) {
+          const data = await res.json()
           setQueueInfo({
             fog_queue_length: data.fog_queue_length || 0,
             cloud_queue_length: data.cloud_queue_length || 0,
             priority_distribution: data.priority_distribution || {}
           })
-        })
-        .catch(() => {
-          // Silently handle - BackendStatus component shows warning
-        })
+        }
+      } catch (error) {
+        // Silently handle - BackendStatus component shows warning
+      }
     }
     
     fetchStatus()
-    const interval = setInterval(fetchStatus, 2000)
+    const interval = setInterval(fetchStatus, 1000) // Update every 1 second for better responsiveness
     return () => clearInterval(interval)
   }, [])
 

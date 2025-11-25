@@ -30,10 +30,14 @@ export default function Analytics() {
   const { config } = useConfig()
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [updateKey, setUpdateKey] = useState(0) // Force chart re-render
 
   useEffect(() => {
     fetchAnalytics()
-    const interval = setInterval(fetchAnalytics, 3000)
+    const interval = setInterval(() => {
+      fetchAnalytics()
+      setUpdateKey(prev => prev + 1) // Force chart update
+    }, 2000) // Update every 2 seconds for better responsiveness
     return () => clearInterval(interval)
   }, [])
 
@@ -43,10 +47,14 @@ export default function Analytics() {
       if (res.ok) {
         const data = await res.json()
         setAnalytics(data)
+        setLoading(false)
+      } else {
+        // If response is not ok, still try to set data to prevent infinite loading
+        console.error('Analytics API returned error:', res.status)
+        setLoading(false)
       }
     } catch (error) {
       console.error('Error fetching analytics:', error)
-    } finally {
       setLoading(false)
     }
   }
@@ -106,6 +114,7 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Distribution</h3>
           <div className="h-64">
             <Doughnut
+              key={`priority-${updateKey}`}
               data={{
                 labels: ['HIGH', 'MODERATE', 'LOW'],
                 datasets: [{
@@ -117,6 +126,10 @@ export default function Analytics() {
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                  animateRotate: true,
+                  animateScale: true
+                },
                 plugins: {
                   legend: { position: 'bottom' }
                 }
@@ -129,6 +142,7 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Latency Comparison</h3>
           <div className="h-64">
             <Line
+              key={`latency-${updateKey}`}
               data={{
                 labels: latencyData.timestamps,
                 datasets: [
@@ -151,6 +165,9 @@ export default function Analytics() {
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                  duration: 500
+                },
                 plugins: {
                   legend: { position: 'top' }
                 },
@@ -169,6 +186,7 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Distribution</h3>
           <div className="h-64">
             <Doughnut
+              key={`task-dist-${updateKey}`}
               data={{
                 labels: ['Fog Processing (HIGH)', 'Cloud Processing (LOW/MOD)', 'Failed'],
                 datasets: [{
@@ -180,6 +198,10 @@ export default function Analytics() {
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                  animateRotate: true,
+                  animateScale: true
+                },
                 plugins: {
                   legend: { position: 'bottom' }
                 }
@@ -192,6 +214,7 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Resource Utilization</h3>
           <div className="h-64">
             <Bar
+              key={`utilization-${updateKey}`}
               data={{
                 labels: [
                   ...Array.from({ length: numFogNodes }, (_, i) => `Fog Node ${i + 1}`),
@@ -210,6 +233,9 @@ export default function Analytics() {
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                  duration: 500
+                },
                 plugins: {
                   legend: { display: false }
                 },
@@ -229,6 +255,7 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Failure Events</h3>
           <div className="h-64">
             <Bar
+              key={`failure-${updateKey}`}
               data={{
                 labels: Array.from({ length: numFogNodes }, (_, i) => `Node ${i + 1}`),
                 datasets: [{
@@ -241,6 +268,9 @@ export default function Analytics() {
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                  duration: 500
+                },
                 plugins: {
                   legend: { display: false }
                 },
