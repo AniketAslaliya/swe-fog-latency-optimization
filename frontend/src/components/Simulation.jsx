@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSimulation } from '../hooks/useSimulation'
 import { useConfig } from '../hooks/useConfig'
+import { getApiEndpoint } from '../utils/api'
 
 export default function Simulation() {
   const { status, metrics, startSimulation, stopSimulation } = useSimulation()

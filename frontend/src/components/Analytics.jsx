@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,14 +31,12 @@ export default function Analytics() {
   const { config } = useConfig()
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [updateKey, setUpdateKey] = useState(0) // Force chart re-render
 
   useEffect(() => {
     fetchAnalytics()
     const interval = setInterval(() => {
       fetchAnalytics()
-      setUpdateKey(prev => prev + 1) // Force chart update
-    }, 2000) // Update every 2 seconds for better responsiveness
+    }, 2000) // Update every 2 seconds
     return () => clearInterval(interval)
   }, [])
 
@@ -115,7 +113,6 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Distribution</h3>
           <div className="h-64">
             <Doughnut
-              key={`priority-${updateKey}`}
               data={{
                 labels: ['HIGH', 'MODERATE', 'LOW'],
                 datasets: [{
@@ -128,8 +125,8 @@ export default function Analytics() {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                  animateRotate: true,
-                  animateScale: true
+                  animateRotate: false,
+                  animateScale: false
                 },
                 plugins: {
                   legend: { position: 'bottom' }
@@ -143,7 +140,6 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Latency Comparison</h3>
           <div className="h-64">
             <Line
-              key={`latency-${updateKey}`}
               data={{
                 labels: latencyData.timestamps,
                 datasets: [
@@ -167,7 +163,7 @@ export default function Analytics() {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                  duration: 500
+                  duration: 0
                 },
                 plugins: {
                   legend: { position: 'top' }
@@ -187,7 +183,6 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Distribution</h3>
           <div className="h-64">
             <Doughnut
-              key={`task-dist-${updateKey}`}
               data={{
                 labels: ['Fog Processing (HIGH)', 'Cloud Processing (LOW/MOD)', 'Failed'],
                 datasets: [{
@@ -200,8 +195,8 @@ export default function Analytics() {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                  animateRotate: true,
-                  animateScale: true
+                  animateRotate: false,
+                  animateScale: false
                 },
                 plugins: {
                   legend: { position: 'bottom' }
@@ -215,7 +210,6 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Resource Utilization</h3>
           <div className="h-64">
             <Bar
-              key={`utilization-${updateKey}`}
               data={{
                 labels: [
                   ...Array.from({ length: numFogNodes }, (_, i) => `Fog Node ${i + 1}`),
@@ -235,7 +229,7 @@ export default function Analytics() {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                  duration: 500
+                  duration: 0
                 },
                 plugins: {
                   legend: { display: false }
@@ -256,7 +250,6 @@ export default function Analytics() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Failure Events</h3>
           <div className="h-64">
             <Bar
-              key={`failure-${updateKey}`}
               data={{
                 labels: Array.from({ length: numFogNodes }, (_, i) => `Node ${i + 1}`),
                 datasets: [{
@@ -270,7 +263,7 @@ export default function Analytics() {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                  duration: 500
+                  duration: 0
                 },
                 plugins: {
                   legend: { display: false }
