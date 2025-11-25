@@ -13,6 +13,7 @@ import {
 } from 'chart.js'
 import { Line, Doughnut, Bar } from 'react-chartjs-2'
 import { useConfig } from '../hooks/useConfig'
+import { getApiEndpoint } from '../utils/api'
 
 ChartJS.register(
   CategoryScale,
@@ -43,7 +44,7 @@ export default function Analytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch('/api/analytics/metrics')
+      const res = await fetch(getApiEndpoint('/analytics/metrics'))
       if (res.ok) {
         const data = await res.json()
         setAnalytics(data)
@@ -61,7 +62,7 @@ export default function Analytics() {
 
   const handleExport = async () => {
     try {
-      const res = await fetch('/api/export/data')
+      const res = await fetch(getApiEndpoint('/export/data'))
       if (res.ok) {
         const data = await res.json()
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })

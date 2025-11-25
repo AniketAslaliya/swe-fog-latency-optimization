@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getApiEndpoint } from '../utils/api'
 
 export function useConfig() {
   const [config, setConfig] = useState({
@@ -16,7 +17,7 @@ export function useConfig() {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/config')
+      const res = await fetch(getApiEndpoint('/config'))
       if (res.ok) {
         const data = await res.json()
         setConfig(data)
@@ -31,7 +32,7 @@ export function useConfig() {
 
   const saveConfig = async (newConfig) => {
     try {
-      const res = await fetch('/api/config', {
+      const res = await fetch(getApiEndpoint('/config'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig)

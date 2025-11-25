@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useSimulation } from '../hooks/useSimulation'
 import { useConfig } from '../hooks/useConfig'
 import TaskQueue from './TaskQueue'
+import { getApiEndpoint } from '../utils/api'
 
 export default function Dashboard() {
   const { status, metrics } = useSimulation()
@@ -10,7 +11,7 @@ export default function Dashboard() {
   const [queueInfo, setQueueInfo] = useState({ fog_queue_length: 0, cloud_queue_length: 0, priority_distribution: {} })
 
   useEffect(() => {
-    fetch('/api/network/topology')
+    fetch(getApiEndpoint('/network/topology'))
       .then(res => {
         if (res.ok) {
           return res.json()
@@ -24,7 +25,7 @@ export default function Dashboard() {
     
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/status')
+        const res = await fetch(getApiEndpoint('/status'))
         if (res.ok) {
           const data = await res.json()
           setQueueInfo({
@@ -137,7 +138,7 @@ export default function Dashboard() {
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Network Topology</h2>
             <button
               onClick={() => {
-                fetch('/api/network/topology')
+                fetch(getApiEndpoint('/network/topology'))
                   .then(res => res.json())
                   .then(data => setTopology(data))
               }}
@@ -274,7 +275,7 @@ function ActivityLog() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch('/api/simulation/events')
+      fetch(getApiEndpoint('/simulation/events'))
         .then(res => res.json())
         .then(data => {
           if (data.events && data.events.length > 0) {

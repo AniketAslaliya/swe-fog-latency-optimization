@@ -19,7 +19,7 @@ export default function Simulation() {
 
   useEffect(() => {
     const fetchQueueInfo = () => {
-      fetch('/api/status')
+      fetch(getApiEndpoint('/status'))
         .then(res => res.json())
         .then(data => {
           setQueueInfo({
@@ -31,7 +31,7 @@ export default function Simulation() {
     }
 
     const interval = setInterval(() => {
-      fetch('/api/simulation/events')
+      fetch(getApiEndpoint('/simulation/events'))
         .then(res => res.json())
         .then(data => {
           if (data.events && data.events.length > 0) {

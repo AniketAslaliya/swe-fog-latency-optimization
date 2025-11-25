@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { getApiEndpoint } from '../utils/api'
 
 export default function IoTDevices({ user }) {
   const [devices, setDevices] = useState([])
@@ -14,7 +15,7 @@ export default function IoTDevices({ user }) {
 
   const fetchDevicePriorities = async () => {
     try {
-      const res = await fetch('/api/device-priorities')
+      const res = await fetch(getApiEndpoint('/device-priorities'))
       if (res.ok) {
         const data = await res.json()
         setDevicePriorities(data.device_priorities || {})
@@ -26,7 +27,7 @@ export default function IoTDevices({ user }) {
 
   const updateDevicePriority = async (deviceId, priority) => {
     try {
-      const res = await fetch('/api/device-priorities', {
+      const res = await fetch(getApiEndpoint('/device-priorities'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device_priorities: { [deviceId]: priority } })

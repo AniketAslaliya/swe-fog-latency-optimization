@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { getApiEndpoint } from '../utils/api'
 
 export function useSimulation() {
   const [status, setStatus] = useState({ running: false, progress: 0 })
@@ -15,7 +16,7 @@ export function useSimulation() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/status')
+      const res = await fetch(getApiEndpoint('/status'))
       if (!res.ok) throw new Error('Backend not responding')
       const data = await res.json()
       setStatus({
@@ -38,7 +39,7 @@ export function useSimulation() {
 
   const startSimulation = async (duration) => {
     try {
-      const res = await fetch('/api/simulation/start', {
+      const res = await fetch(getApiEndpoint('/simulation/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ duration })
@@ -53,7 +54,7 @@ export function useSimulation() {
 
   const stopSimulation = async () => {
     try {
-      const res = await fetch('/api/simulation/stop', {
+      const res = await fetch(getApiEndpoint('/simulation/stop'), {
         method: 'POST'
       })
       if (res.ok) {

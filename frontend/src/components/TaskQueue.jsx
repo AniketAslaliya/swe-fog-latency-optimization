@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { getApiEndpoint } from '../utils/api'
 
 export default function TaskQueue() {
   const [tasks, setTasks] = useState({ fog_queue: [], cloud_queue: [], active_tasks: [] })
@@ -6,7 +7,7 @@ export default function TaskQueue() {
 
   useEffect(() => {
     const fetchTasks = () => {
-      fetch('/api/tasks')
+      fetch(getApiEndpoint('/tasks'))
         .then(res => res.json())
         .then(data => {
           setTasks(data)

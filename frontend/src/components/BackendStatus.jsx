@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { getApiEndpoint } from '../utils/api'
 
 export default function BackendStatus() {
   const [isConnected, setIsConnected] = useState(false)
@@ -10,7 +11,7 @@ export default function BackendStatus() {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 2000) // 2 second timeout
         
-        const res = await fetch('/api/status', { 
+        const res = await fetch(getApiEndpoint('/status'), { 
           method: 'GET',
           signal: controller.signal
         })

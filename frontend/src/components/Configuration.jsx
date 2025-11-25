@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useConfig } from '../hooks/useConfig'
+import { getApiEndpoint } from '../utils/api'
 
 export default function Configuration() {
   const { config, saveConfig, fetchConfig } = useConfig()
@@ -21,7 +22,7 @@ export default function Configuration() {
 
   const fetchDevicePriorities = async () => {
     try {
-      const res = await fetch('/api/device-priorities')
+      const res = await fetch(getApiEndpoint('/device-priorities'))
       if (res.ok) {
         const data = await res.json()
         setDevicePriorities(data.device_priorities || {})
@@ -38,7 +39,7 @@ export default function Configuration() {
     setDevicePriorities(updated)
     
     try {
-      const res = await fetch('/api/device-priorities', {
+      const res = await fetch(getApiEndpoint('/device-priorities'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ device_priorities: { [deviceId]: priority } })
@@ -508,7 +509,7 @@ export default function Configuration() {
                         updated[`device_${i}`] = 'HIGH'
                       }
                       setDevicePriorities(updated)
-                      fetch('/api/device-priorities', {
+                      fetch(getApiEndpoint('/device-priorities'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ device_priorities: updated })
@@ -526,7 +527,7 @@ export default function Configuration() {
                         updated[`device_${i}`] = 'MODERATE'
                       }
                       setDevicePriorities(updated)
-                      fetch('/api/device-priorities', {
+                      fetch(getApiEndpoint('/device-priorities'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ device_priorities: updated })
@@ -544,7 +545,7 @@ export default function Configuration() {
                         updated[`device_${i}`] = 'LOW'
                       }
                       setDevicePriorities(updated)
-                      fetch('/api/device-priorities', {
+                      fetch(getApiEndpoint('/device-priorities'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ device_priorities: updated })
