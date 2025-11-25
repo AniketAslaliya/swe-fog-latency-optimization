@@ -14,8 +14,9 @@ export default defineConfig({
       }
     }
   },
-  // Define environment variables that will be available in the app
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '')
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false
   }
 })
